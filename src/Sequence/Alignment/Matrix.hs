@@ -4,6 +4,7 @@
 module Sequence.Alignment.Matrix
     ( ScoringMatrix (..)
     , BLOSUM62 (..), PAM250 (..), NUC44 (..)
+    , blosum62, pam250, nuc44
     , matrix
     ) where
 
