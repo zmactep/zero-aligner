@@ -1,8 +1,13 @@
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE BangPatterns #-}
+
 module Sequence.Alignment.Instances where
 
-import           Data.Array              ((!), bounds)
+import           Control.Monad           (ap)
+import           Data.Array              (assocs, bounds, (!))
 import           Data.ByteString.Char8   (ByteString)
 import qualified Data.ByteString.Char8   as B
+import           Data.List               (maximumBy)
 
 import           Sequence.Alignment.Type
 
@@ -22,11 +27,7 @@ instance Alignment EditDistance where
   gap _ = -1
   substitution _ c d | c == d    = 0
                      | otherwise = -1
-  conditions ed = Conditions { isStop = defaultStop ed
-                             , isDiag = defaultDiag ed
-                             , isVert = defaultVert ed
-                             , isHoriz = defaultHoriz ed
-                             }
+  conditions = defaultConds
   selector ed mat = let (_, sp) = bounds mat in (True, sp)
   inits ed = (* gap ed)
   additional _ = minBound
@@ -36,8 +37,7 @@ instance Alignment SimpleAlignment where
   substitution = subst
   conditions sa | aType sa == LocalAlignment = localConds sa
                 | otherwise                  = defaultConds sa
-  selector sa mat | aType sa == GlobalAlignment     = let (_, sp) = bounds mat
-                                                      in  (False, sp)
+  selector sa mat | aType sa == GlobalAlignment     = (False, snd $ bounds mat)
                   | aType sa == LocalAlignment      = (False, localStart mat)
                   | aType sa == SemiglobalAlignment = (True, semiglobalStart mat)
   inits sa | aType sa == GlobalAlignment = (* gap sa)
@@ -60,14 +60,19 @@ mkEditDistance = EditDistance
 
 -- Default helpers
 
+subIJ :: Alignment a => a -> ByteString -> ByteString -> Substitution Int
+subIJ sa s t i j = sub (s `B.index` (i - 1)) (t `B.index` (j - 1))
+  where !sub = substitution sa
+{-# INLINE subIJ #-}
+
 localStart :: Matrix -> (Int, Int)
-localStart = undefined
+localStart = listKeyByValMax . assocs
 
 semiglobalStart :: Matrix -> (Int, Int)
-semiglobalStart = undefined
-
-subIJ :: Alignment a => a -> ByteString -> ByteString -> Substitution Int
-subIJ sa s t i j = substitution sa (s `B.index` (i - 1)) (t `B.index` (j - 1))
+semiglobalStart mat = listKeyByValMax $ lastRow ++ lastCol
+  where lastRow = ap (,) (mat !) . (me,) <$> [ns..ne]
+        lastCol = ap (,) (mat !) . (,ne) <$> [ms..me]
+        ((ms, ns), (me, ne)) = bounds mat
 
 localConds :: Alignment a => a -> Conditions
 localConds a = (defaultConds a) { isStop = localStop a }
@@ -94,3 +99,9 @@ defaultVert sa m s t i j = i /= 0 && m ! (i, j) == m ! (i - 1, j) + gap sa
 
 defaultHoriz :: Alignment a => a -> Condition
 defaultHoriz sa m s t i j = j /= 0 && m ! (i, j) == m ! (i, j - 1) + gap sa
+
+listKeyByValMax :: Ord b => [(a, b)] -> a
+listKeyByValMax = fst . maximumBy elemsOrd
+  where elemsOrd (_, x) (_, y) | x == y = EQ
+                               | x <  y = LT
+                               | x >  y = GT

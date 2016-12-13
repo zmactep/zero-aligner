@@ -19,8 +19,8 @@ matrixDec s = do let slines = lines s
                  let txt = (unlines . tail) slines
                  matType <- newName (head slines)
                  let matData = mkName (nameBase matType)
-                 scoreImpl <- runQ [| const (mkSubstitution txt) |]
+                 scoreImpl <- runQ [| mkSubstitution txt |]
                  let dataDecl = DataD [] matType [] Nothing [NormalC matData []] [ConT ''Show, ConT ''Eq]
                  let instDecl = InstanceD Nothing [] (AppT (ConT ''ScoringMatrix) (ConT matType))
-                 let instBody = [ValD (VarP 'scoring) (NormalB scoreImpl) []]
+                 let instBody = [FunD 'scoring [Clause [WildP] (NormalB scoreImpl) []]]
                  return [dataDecl, instDecl instBody]
