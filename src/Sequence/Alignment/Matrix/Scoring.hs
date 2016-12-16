@@ -3,17 +3,12 @@
 module Sequence.Alignment.Matrix.Scoring where
 
 import           Control.Applicative       (liftA2)
-import           Data.Map.Strict           (fromList, (!))
 import Data.List (words)
 
 import           Sequence.Alignment.Type
 
 class ScoringMatrix a where
   scoring :: a -> Substitution Char
-
-mkSubstitution :: String -> Substitution Char
-mkSubstitution t c d = m ! (c, d)
-  where !m = fromList $ loadMatrix t
 
 loadMatrix :: String -> [((Char, Char), Int)]
 loadMatrix txt = concat table

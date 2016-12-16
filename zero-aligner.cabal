@@ -27,8 +27,6 @@ library
                      , data-default
                      , bytestring
                      , array
-                     , containers
-                     , text
                      , template-haskell
   ghc-options:         -funfolding-use-threshold=16 -O2 -optc-O3
   default-language:    Haskell2010
